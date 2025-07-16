@@ -1,3 +1,15 @@
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
 # Compiled class file
 *.class
 
@@ -12,6 +24,7 @@
 
 # Package Files #
 *.jar
+!maven-wrapper.jar
 *.war
 *.nar
 *.ear
@@ -22,3 +35,73 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+# IDE specific files
+.idea/
+*.iml
+*.ipr
+*.iws
+*.bak
+*.swp
+*~.nib
+local.properties
+.settings/
+.loadpath
+.recommenders
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+
+# Eclipse
+.classpath
+.project
+.settings/
+bin/
+
+# VS Code
+.vscode/
+
+# Mac OS X
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Database files
+*.db
+*.derby
+*.dat
+*.dir
+*.pag
+
+# Logs
+logs/
+*.log.*
+
+# Local configuration files
+*.properties
+*.prefs
+
+# Build output
+build/
+out/
+
+# Dependency directories
+lib/
+libs/
+
+# Application specific
+*.lck
+*.lck~
+
+# Temp files
+*.tmp
+*.temp

@@ -1,12 +1,9 @@
 package com.wellness.util;
 
 import java.sql.*;
-import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.dbcp2.BasicDataSource;
-import org.apache.commons.dbcp2.BasicDataSourceFactory;
-import java.io.IOException;
 
 /**
  * DatabaseManager handles all database operations including connection management,
@@ -45,7 +42,7 @@ public class DatabaseManager {
             dataSource.setMaxTotal(20);
             dataSource.setMaxIdle(10);
             dataSource.setMinIdle(5);
-            dataSource.setMaxWaitMillis(10000);
+            dataSource.setMaxWait(java.time.Duration.ofSeconds(10));
             
             LOGGER.info("Database connection pool initialized successfully");
         } catch (Exception e) {
@@ -97,6 +94,8 @@ public class DatabaseManager {
         
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement()) {
+            // Execute a simple query to verify the connection is valid
+            stmt.execute("SELECT 1 FROM SYS.SYSTABLES");
             
             // Check if tables already exist
             DatabaseMetaData dbm = conn.getMetaData();
@@ -196,17 +195,28 @@ public class DatabaseManager {
      * @throws SQLException if a database error occurs
      */
     public static void backupDatabase(String backupDir) throws SQLException {
+        // Ensure the backup directory exists
+        java.io.File dir = new java.io.File(backupDir);
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+        
         // Create a connection without using the pool for backup operation
         try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
              Statement stmt = conn.createStatement()) {
             
+            // Normalize the path and escape single quotes for SQL
+            String normalizedPath = dir.getAbsolutePath();
+            normalizedPath = normalizedPath.replace("'", "''");
+            
             String backupCommand = String.format(
                 "CALL SYSCS_UTIL.SYSCS_BACKUP_DATABASE('%s')", 
-                backupDir.replace("'", "''")
+                normalizedPath
             );
             
+            LOGGER.info("Creating database backup with command: " + backupCommand);
             stmt.execute(backupCommand);
-            LOGGER.info("Database backup created successfully in: " + backupDir);
+            LOGGER.info("Database backup created successfully in: " + normalizedPath);
         }
     }
     
@@ -226,14 +236,29 @@ public class DatabaseManager {
             dataSource = null;
         }
         
+        // Normalize the backup directory path
+        String normalizedPath = new java.io.File(backupDir).getAbsolutePath();
+        
         // Now restore from backup using a direct connection
-        try (Connection conn = DriverManager.getConnection("jdbc:derby:;restoreFrom=" + backupDir);
+        String restoreUrl = "jdbc:derby:;restoreFrom=" + normalizedPath;
+        LOGGER.info("Attempting to restore database from: " + normalizedPath);
+        
+        try (Connection conn = DriverManager.getConnection(restoreUrl);
              Statement stmt = conn.createStatement()) {
-            
-            LOGGER.info("Database restored successfully from: " + backupDir);
+            // Execute a simple query to verify the connection is valid
+            stmt.execute("SELECT 1 FROM SYS.SYSTABLES");
+            LOGGER.info("Database restored and verified from: " + normalizedPath);
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error restoring database", e);
+            throw e;
         }
         
         // Reinitialize the data source after restore
-        initializeDataSource();
+        try {
+            initializeDataSource();
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error reinitializing data source after restore", e);
+            throw new SQLException("Failed to reinitialize data source after restore", e);
+        }
     }
 }

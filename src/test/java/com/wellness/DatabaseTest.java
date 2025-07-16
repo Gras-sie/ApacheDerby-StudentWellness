@@ -4,14 +4,16 @@ import com.wellness.util.DatabaseManager;
 import com.wellness.util.DbUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
+
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Test class for database operations.
@@ -32,13 +34,13 @@ public class DatabaseTest {
     
     @Test
     public void testDatabaseConnection() {
-        try (var conn = DatabaseManager.getConnection()) {
+        try (java.sql.Connection conn = DatabaseManager.getConnection()) {
             assertNotNull(conn, "Database connection should not be null");
             assertFalse(conn.isClosed(), "Database connection should be open");
             
             // Test if we can execute a simple query
-            try (var stmt = conn.createStatement();
-                 var rs = stmt.executeQuery("VALUES 1")) {
+            try (java.sql.Statement stmt = conn.createStatement();
+                 java.sql.ResultSet rs = stmt.executeQuery("VALUES 1")) {
                 assertTrue(rs.next(), "Should have at least one row");
                 assertEquals(1, rs.getInt(1), "Should return 1");
             }
@@ -53,11 +55,11 @@ public class DatabaseTest {
     public void testTablesExist() {
         String[] tables = {"APPOINTMENTS", "COUNSELORS", "FEEDBACK"};
         
-        try (var conn = DatabaseManager.getConnection()) {
-            var dbmd = conn.getMetaData();
+        try (java.sql.Connection conn = DatabaseManager.getConnection()) {
+            java.sql.DatabaseMetaData dbmd = conn.getMetaData();
             
             for (String table : tables) {
-                try (var rs = dbmd.getTables(null, null, table, null)) {
+                try (java.sql.ResultSet rs = dbmd.getTables(null, null, table, null)) {
                     assertTrue(rs.next(), "Table " + table + " should exist");
                 }
             }
@@ -93,33 +95,56 @@ public class DatabaseTest {
     }
     
     @Test
-    public void testBackupAndRestore() {
-        String backupDir = System.getProperty("java.io.tmpdir") + "/wellness_backup";
+    void testBackupAndRestore() {
+        String backupDir = System.getProperty("java.io.tmpdir") + "/wellness_backup_" + System.currentTimeMillis();
         
-        try {
+        try (java.sql.Connection conn = DatabaseManager.getConnection()) {
+            // Start with a clean state - delete any existing test data
+            String cleanupSql = "DELETE FROM counselors WHERE email LIKE 'test_%'";
+            DbUtils.executeUpdate(cleanupSql);
+            
             // Take a backup
             DatabaseManager.backupDatabase(backupDir);
             
             // Get current data count
             String sql = "SELECT COUNT(*) FROM counselors";
-            Integer originalCount = DbUtils.queryForObject(sql, rs -> rs.getInt(1));
+            int originalCount = DbUtils.queryForObject(sql, rs -> rs.getInt(1));
             
-            // Add test data
-            sql = "INSERT INTO counselors (name, specialization, email) VALUES (?, ?, ?)";
-            DbUtils.executeUpdate(sql, "Test Counselor", "Test", "test@example.com");
-            
-            // Verify data was added
-            sql = "SELECT COUNT(*) FROM counselors";
-            Integer newCount = DbUtils.queryForObject(sql, rs -> rs.getInt(1));
-            assertEquals(originalCount + 1, newCount, "Should have one more counselor after insert");
-            
-            // Restore from backup
-            DatabaseManager.restoreDatabase(backupDir);
-            
-            // Verify data was restored
-            sql = "SELECT COUNT(*) FROM counselors";
-            Integer restoredCount = DbUtils.queryForObject(sql, rs -> rs.getInt(1));
-            assertEquals(originalCount, restoredCount, "Should have original count after restore");
+            try {
+                // Add test data with a unique email
+                String testEmail = "test_" + System.currentTimeMillis() + "@example.com";
+                sql = "INSERT INTO counselors (name, specialization, email) VALUES (?, ?, ?)";
+                DbUtils.executeUpdate(sql, "Test Counselor", "Test", testEmail);
+                
+                // Verify data was added
+                sql = "SELECT COUNT(*) FROM counselors";
+                int newCount = DbUtils.queryForObject(sql, rs -> rs.getInt(1));
+                assertTrue(newCount > originalCount, "Should have more counselors after insert");
+                
+                // Restore from backup
+                DatabaseManager.restoreDatabase(backupDir);
+                
+                // Verify data was restored
+                sql = "SELECT COUNT(*) FROM counselors";
+                int restoredCount = DbUtils.queryForObject(sql, rs -> rs.getInt(1));
+                assertEquals(originalCount, restoredCount, "Should have original count after restore");
+                
+                // Verify our test data is gone
+                sql = "SELECT COUNT(*) FROM counselors WHERE email = ?";
+                int testDataCount = DbUtils.queryForObject(sql, rs -> rs.getInt(1), testEmail);
+                assertEquals(0, testDataCount, "Test data should not exist after restore");
+                
+            } finally {
+                // Clean up backup directory
+                try {
+                    java.nio.file.Files.walk(java.nio.file.Paths.get(backupDir))
+                        .sorted(java.util.Comparator.reverseOrder())
+                        .map(java.nio.file.Path::toFile)
+                        .forEach(java.io.File::delete);
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, "Failed to clean up backup directory", e);
+                }
+            }
             
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Backup/restore test failed", e);
