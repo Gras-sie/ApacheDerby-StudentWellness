@@ -96,4 +96,53 @@ public interface FeedbackDAO extends BaseDAO<Feedback, Integer> {
      * @return A list of all non-anonymous feedback entries
      */
     List<Feedback> findNonAnonymousFeedback();
+    
+    /**
+     * Searches for feedback containing the given search term in the comments or student names.
+     *
+     * @param searchTerm The term to search for
+     * @return A list of matching feedback entries
+     */
+    List<Feedback> searchFeedback(String searchTerm);
+    
+    /**
+     * Gets the average rating for a specific counselor.
+     *
+     * @param counselorId The ID of the counselor
+     * @return The average rating, or 0 if no feedback exists
+     */
+    double getAverageRatingByCounselorId(Integer counselorId);
+    
+    /**
+     * Gets the count of feedback for a specific counselor.
+     *
+     * @param counselorId The ID of the counselor
+     * @return The count of feedback entries
+     */
+    int getFeedbackCountByCounselorId(Integer counselorId);
+    
+    /**
+     * Gets all feedback for a specific student.
+     *
+     * @param studentId The ID of the student
+     * @return A list of feedback entries for the student
+     */
+    List<Feedback> getFeedbackByStudentId(Integer studentId);
+    
+    /**
+     * Gets all feedback for a specific appointment.
+     *
+     * @param appointmentId The ID of the appointment
+     * @return A list of feedback entries for the appointment
+     */
+    List<Feedback> getFeedbackByAppointmentId(Integer appointmentId);
+    
+    /**
+     * Gets all feedback within a specific rating range.
+     *
+     * @param minRating The minimum rating (inclusive)
+     * @param maxRating The maximum rating (inclusive)
+     * @return A list of feedback entries within the rating range
+     */
+    List<Feedback> getFeedbackByRatingRange(int minRating, int maxRating);
 }
