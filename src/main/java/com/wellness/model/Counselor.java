@@ -12,7 +12,9 @@ public class Counselor extends Entity {
     private String email;
     private String phoneNumber;
     private String specialization;
-    private String bio;
+    private String bio; // Alias for biography for backward compatibility
+    private String biography; // Rich text biography
+    private String photoPath; // Path to the counselor's photo
     private boolean isActive;
 
     public Counselor() {
@@ -86,11 +88,22 @@ public class Counselor extends Entity {
     }
 
     public String getBio() {
-        return bio;
+        return bio != null ? bio : "";
     }
 
     public void setBio(String bio) {
         this.bio = bio != null ? bio.trim() : null;
+        this.biography = this.bio; // Keep in sync
+        updateTimestamp();
+    }
+    
+    public String getBiography() {
+        return biography != null ? biography : getBio();
+    }
+    
+    public void setBiography(String biography) {
+        this.biography = biography != null ? biography.trim() : null;
+        this.bio = this.biography; // Keep in sync
         updateTimestamp();
     }
 
@@ -99,11 +112,26 @@ public class Counselor extends Entity {
     }
 
     public void setActive(boolean active) {
-        if (this.isActive != active) {
-            System.out.println("Counselor " + getFullName() + " active status changed to: " + active);
-            this.isActive = active;
-            updateTimestamp();
-        }
+        isActive = active;
+        updateTimestamp();
+    }
+    
+    // For compatibility with controller
+    public boolean getIsActive() {
+        return isActive();
+    }
+    
+    public void setIsActive(boolean active) {
+        setActive(active);
+    }
+    
+    public String getPhotoPath() {
+        return photoPath;
+    }
+    
+    public void setPhotoPath(String photoPath) {
+        this.photoPath = photoPath != null ? photoPath.trim() : null;
+        updateTimestamp();
     }
 
     // Business Logic Methods
@@ -142,13 +170,29 @@ public class Counselor extends Entity {
     public String toString() {
         return "Counselor{" +
                 "id=" + getId() +
-                ", fullName='" + getFullName() + '\'' +
+                ", firstName='" + firstName + '\'' +
+                ", lastName='" + lastName + '\'' +
                 ", email='" + email + '\'' +
                 ", phoneNumber='" + phoneNumber + '\'' +
                 ", specialization='" + specialization + '\'' +
+                ", photoPath='" + photoPath + '\'' +
                 ", isActive=" + isActive +
-                ", createdDate=" + getCreatedDate() +
-                ", updatedDate=" + getUpdatedDate() +
+                ", createdAt=" + getCreatedAt() +
+                ", updatedAt=" + getUpdatedAt() +
                 '}';
+    }
+    
+    /**
+     * Creates a deep copy of this counselor.
+     * @return A new Counselor instance with the same property values.
+     */
+    @Override
+    public Counselor clone() {
+        try {
+            return (Counselor) super.clone();
+        } catch (CloneNotSupportedException e) {
+            // This should never happen since we implement Cloneable
+            throw new InternalError(e);
+        }
     }
 }

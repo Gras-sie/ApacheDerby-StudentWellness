@@ -35,16 +35,38 @@ public abstract class Entity {
         updateTimestamp();
     }
 
+    /**
+     * @return The creation timestamp of this entity
+     */
     public LocalDateTime getCreatedDate() {
         return createdDate;
+    }
+    
+    /**
+     * Alias for getCreatedDate() for compatibility with some views
+     * @return The creation timestamp of this entity
+     */
+    public LocalDateTime getCreatedAt() {
+        return getCreatedDate();
     }
 
     protected void setCreatedDate(LocalDateTime createdDate) {
         this.createdDate = createdDate != null ? createdDate : LocalDateTime.now();
     }
 
+    /**
+     * @return The last update timestamp of this entity
+     */
     public LocalDateTime getUpdatedDate() {
         return updatedDate;
+    }
+    
+    /**
+     * Alias for getUpdatedDate() for compatibility with some views
+     * @return The last update timestamp of this entity
+     */
+    public LocalDateTime getUpdatedAt() {
+        return getUpdatedDate();
     }
 
     protected void setUpdatedDate(LocalDateTime updatedDate) {
@@ -54,9 +76,34 @@ public abstract class Entity {
     /**
      * Updates the updatedDate timestamp to current time.
      */
+    /**
+     * Updates the timestamp to the current time.
+     * This is called automatically when any setter is called.
+     */
     protected void updateTimestamp() {
         this.updatedDate = LocalDateTime.now();
         System.out.println("Entity " + this.getClass().getSimpleName() + " updated at: " + updatedDate);
+    }
+    
+    /**
+     * Sets the ID of this entity with proper type conversion.
+     * @param id The ID to set (can be Number or String)
+     */
+    public void setId(Object id) {
+        if (id == null) {
+            this.id = null;
+        } else if (id instanceof Number) {
+            this.id = ((Number) id).intValue();
+        } else if (id instanceof String) {
+            try {
+                this.id = Integer.parseInt(id.toString());
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("ID must be a number", e);
+            }
+        } else {
+            throw new IllegalArgumentException("ID must be a number");
+        }
+        updateTimestamp();
     }
 
     // Object overrides
