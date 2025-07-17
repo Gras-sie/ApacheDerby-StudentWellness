@@ -2,17 +2,13 @@ package com.wellness.view;
 
 import com.wellness.model.Appointment;
 import com.wellness.model.Appointment.Status;
-import org.jdesktop.swingx.JXDatePicker;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.text.MaskFormatter;
 import java.awt.*;
-import java.awt.event.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.ZoneId;
-import java.util.Date;
-import java.util.List;
 
 /**
  * Dialog for adding or editing appointments.
@@ -24,7 +20,7 @@ public class AppointmentDialog extends JDialog {
     // Form fields
     private JComboBox<String> studentCombo;
     private JComboBox<String> counselorCombo;
-    private JXDatePicker datePicker;
+    private JFormattedTextField dateField;
     private JComboBox<String> timeCombo;
     private JComboBox<Status> statusCombo;
     private JTextArea notesArea;
@@ -90,10 +86,16 @@ public class AppointmentDialog extends JDialog {
         formPanel.add(new JLabel("Date:"), gbc);
         
         gbc.gridx = 1;
-        datePicker = new JXDatePicker();
-        datePicker.setFormats("yyyy-MM-dd");
-        datePicker.addActionListener(e -> updateAvailableTimes());
-        formPanel.add(datePicker, gbc);
+        try {
+            MaskFormatter dateMask = new MaskFormatter("####-##-##");
+            dateMask.setPlaceholderCharacter('_');
+            dateField = new JFormattedTextField(dateMask);
+            dateField.setColumns(10);
+            dateField.addActionListener(e -> updateAvailableTimes());
+        } catch (java.text.ParseException ex) {
+            dateField = new JFormattedTextField();
+        }
+        formPanel.add(dateField, gbc);
         
         // Time selection
         gbc.gridx = 0;
@@ -162,7 +164,7 @@ public class AppointmentDialog extends JDialog {
         
         if (appointment.getStartTime() != null) {
             // Set date
-            datePicker.setDate(java.sql.Timestamp.valueOf(appointment.getStartTime()));
+            dateField.setText(appointment.getStartTime().toLocalDate().toString());
             
             // Set time
             String timeStr = appointment.getStartTime().toLocalTime().toString();
@@ -182,17 +184,6 @@ public class AppointmentDialog extends JDialog {
         // Clear existing items
         timeCombo.removeAllItems();
         
-        // Get selected date
-        Date selectedDate = datePicker.getDate();
-        if (selectedDate == null) {
-            return;
-        }
-        
-        // Convert to LocalDate
-        LocalDate date = selectedDate.toInstant()
-            .atZone(ZoneId.systemDefault())
-            .toLocalDate();
-            
         // Add all time slots for now (will be filtered by availability later)
         for (String slot : TIME_SLOTS) {
             timeCombo.addItem(slot);
@@ -216,7 +207,7 @@ public class AppointmentDialog extends JDialog {
             return false;
         }
         
-        if (datePicker.getDate() == null) {
+        if (dateField.getText() == null || dateField.getText().trim().isEmpty()) {
             JOptionPane.showMessageDialog(this, 
                 "Please select a date.", 
                 "Validation Error", JOptionPane.ERROR_MESSAGE);
@@ -244,29 +235,27 @@ public class AppointmentDialog extends JDialog {
             // Extract student ID from the selected item (format: "Name (ID: 123)")
             String studentInfo = (String) studentCombo.getSelectedItem();
             int studentId = Integer.parseInt(studentInfo.substring(studentInfo.indexOf("ID: ") + 4, studentInfo.length() - 1));
-            
+
             // Extract counselor ID (placeholder - implement actual extraction)
             int counselorId = 1; // Placeholder
-            
-            // Combine date and time
-            java.util.Date date = datePicker.getDate();
+
+            // Get selected date and time
+            LocalDate selectedDate = LocalDate.parse(dateField.getText());
             String timeStr = (String) timeCombo.getSelectedItem();
             LocalTime time = LocalTime.parse(timeStr);
-            LocalDateTime dateTime = date.toInstant()
-                .atZone(java.time.ZoneId.systemDefault())
-                .toLocalDate()
-                .atTime(time);
-                
+            LocalDateTime dateTime = LocalDateTime.of(selectedDate, time);
+
             appointment.setStudentId(studentId);
             appointment.setCounselorId(counselorId);
             appointment.setStartTime(dateTime);
             appointment.setEndTime(dateTime.plusMinutes(30)); // 30-minute appointments
             appointment.setStatus((Status) statusCombo.getSelectedItem());
             appointment.setNotes(notesArea.getText().trim());
-            
+
             // Mark as saved and close
             saved = true;
             dispose();
+
             
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, 

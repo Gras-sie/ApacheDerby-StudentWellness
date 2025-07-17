@@ -3,19 +3,27 @@ package com.wellness.view;
 import com.wellness.controller.AppointmentController;
 import com.wellness.model.Appointment;
 import com.wellness.model.Appointment.Status;
-import org.jdesktop.swingx.JXDatePicker;
+
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.*;
+import javax.swing.text.MaskFormatter;
 import java.awt.*;
 import java.awt.event.*;
-import java.text.SimpleDateFormat;
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.text.ParseException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.Date;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Panel for managing appointments in the Wellness Management System.
@@ -31,8 +39,8 @@ public class AppointmentPanel extends JPanel {
     private JTextField searchField;
     private JComboBox<Status> statusFilter;
     private JComboBox<String> counselorFilter;
-    private JXDatePicker dateFromFilter;
-    private JXDatePicker dateToFilter;
+    private JFormattedTextField dateFromFilter;
+    private JFormattedTextField dateToFilter;
     private JButton exportButton;
     
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
@@ -95,17 +103,25 @@ public class AppointmentPanel extends JPanel {
         filterPanel.add(Box.createHorizontalStrut(20));
         
         filterPanel.add(new JLabel("From:"));
-        dateFromFilter = new JXDatePicker();
-        dateFromFilter.setFormats("yyyy-MM-dd");
-        dateFromFilter.setPreferredSize(new Dimension(120, dateFromFilter.getPreferredSize().height));
-        dateFromFilter.getDateEditor().addPropertyChangeListener(e -> applyFilters());
+        try {
+            MaskFormatter dateMask = new MaskFormatter("####-##-##");
+            dateMask.setPlaceholderCharacter('_');
+            dateFromFilter = new JFormattedTextField(dateMask);
+            dateFromFilter.setColumns(10);
+        } catch (ParseException ex) {
+            dateFromFilter = new JFormattedTextField();
+        }
         filterPanel.add(dateFromFilter);
         
         filterPanel.add(new JLabel("To:"));
-        dateToFilter = new JXDatePicker();
-        dateToFilter.setFormats("yyyy-MM-dd");
-        dateToFilter.setPreferredSize(new Dimension(120, dateToFilter.getPreferredSize().height));
-        dateToFilter.getDateEditor().addPropertyChangeListener(e -> applyFilters());
+        try {
+            MaskFormatter dateMask = new MaskFormatter("####-##-##");
+            dateMask.setPlaceholderCharacter('_');
+            dateToFilter = new JFormattedTextField(dateMask);
+            dateToFilter.setColumns(10);
+        } catch (ParseException ex) {
+            dateToFilter = new JFormattedTextField();
+        }
         filterPanel.add(dateToFilter);
         
         filterPanel.add(Box.createHorizontalStrut(20));
@@ -134,8 +150,7 @@ public class AppointmentPanel extends JPanel {
             }
         });
         
-        // Enable right-click context menu
-        createContextMenu();
+        // Setup context menu is now handled in the constructor
         
         JScrollPane scrollPane = new JScrollPane(appointmentTable);
         add(scrollPane, BorderLayout.CENTER);
@@ -143,6 +158,35 @@ public class AppointmentPanel extends JPanel {
         // Status bar
         JLabel statusLabel = new JLabel("Ready");
         add(statusLabel, BorderLayout.SOUTH);
+        
+        // Setup document listeners
+        setupDocumentListeners();
+        
+        // Setup context menu
+        setupContextMenu();
+    }
+    
+    private void setupDocumentListeners() {
+        DocumentListener filterListener = new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                applyFilters();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                applyFilters();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                // Plain text components don't fire these events
+            }
+        };
+        
+        searchField.getDocument().addDocumentListener(filterListener);
+        dateFromFilter.getDocument().addDocumentListener(filterListener);
+        dateToFilter.getDocument().addDocumentListener(filterListener);
     }
     
     private void loadAppointments() {
@@ -157,13 +201,35 @@ public class AppointmentPanel extends JPanel {
     }
     
     private void loadCounselors() {
-        // Implementation to load counselors from controller
-        // This is a placeholder - implement actual loading
-        counselorFilter.removeAllItems();
-        counselorFilter.addItem(null); // Add "All" option
-        // TODO: Load actual counselors from controller
-        counselorFilter.addItem("John Doe");
-        counselorFilter.addItem("Jane Smith");
+        try {
+            // Clear existing items
+            counselorFilter.removeAllItems();
+            
+            // Add default "All" option
+            counselorFilter.addItem(null);
+            
+            // Load counselors from controller - using hardcoded list for now
+            // TODO: Replace with actual implementation when available
+            List<String> counselors = new ArrayList<>();
+            counselors.add("Dr. John Smith");
+            counselors.add("Dr. Sarah Johnson");
+            counselors.add("Dr. Michael Brown");
+            
+            for (String counselor : counselors) {
+                counselorFilter.addItem(counselor);
+            }
+        } catch (Exception e) {
+            System.err.println("Error loading counselors: " + e.getMessage());
+            JOptionPane.showMessageDialog(this,
+                "Error loading counselors. Using default list.",
+                "Warning",
+                JOptionPane.WARNING_MESSAGE);
+                
+            // Add default test data
+            counselorFilter.addItem("Dr. John Smith");
+            counselorFilter.addItem("Dr. Sarah Johnson");
+            counselorFilter.addItem("Dr. Michael Brown");
+        }
     }
     
     private void updateTable(List<Appointment> appointments) {
@@ -174,8 +240,6 @@ public class AppointmentPanel extends JPanel {
                 return false; // Make table non-editable
             }
         };
-        
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm");
         
         for (Appointment appt : appointments) {
             // Format the appointment data for display
@@ -197,70 +261,168 @@ public class AppointmentPanel extends JPanel {
     }
     
     private void applyFilters() {
-        // Get filter values
-        String searchText = searchField.getText().toLowerCase();
-        Status status = (Status) statusFilter.getSelectedItem();
-        Date fromDate = dateFromFilter.getDate();
-        Date toDate = dateToFilter.getDate();
-        
-        // Apply filters using controller
-        // TODO: Implement filter logic
+        try {
+            // Get filter values
+            String searchText = searchField.getText().toLowerCase();
+            Status status = (Status) statusFilter.getSelectedItem();
+            LocalDate fromDate = null;
+            LocalDate toDate = null;
+            
+            // Parse date filters
+            String fromText = dateFromFilter.getText().trim();
+            String toText = dateToFilter.getText().trim();
+            
+            if (!fromText.isEmpty() && fromText.length() == 10) {
+                fromDate = LocalDate.parse(fromText, DateTimeFormatter.ISO_LOCAL_DATE);
+            }
+            
+            if (!toText.isEmpty() && toText.length() == 10) {
+                toDate = LocalDate.parse(toText, DateTimeFormatter.ISO_LOCAL_DATE);
+            }
+            
+            // Apply filters using controller
+            List<Appointment> filteredAppointments = controller.getAllAppointments();
+            
+            // Apply search text filter
+            if (!searchText.isEmpty()) {
+                filteredAppointments = filteredAppointments.stream()
+                    .filter(a -> String.valueOf(a.getId()).contains(searchText) ||
+                               String.valueOf(a.getStudentId()).contains(searchText) ||
+                               String.valueOf(a.getCounselorId()).contains(searchText) ||
+                               (a.getNotes() != null && a.getNotes().toLowerCase().contains(searchText)))
+                    .collect(Collectors.toList());
+            }
+            
+            // Apply status filter
+            if (status != null) {
+                filteredAppointments = filteredAppointments.stream()
+                    .filter(a -> a.getStatus() == status)
+                    .collect(Collectors.toList());
+            }
+            
+            // Apply date range filter
+            final LocalDate filterFromDate = fromDate;
+            final LocalDate filterToDate = toDate;
+            
+            filteredAppointments = filteredAppointments.stream()
+                .filter(a -> a.getStartTime() != null && 
+                          (filterFromDate == null || !a.getStartTime().toLocalDate().isBefore(filterFromDate)) &&
+                          (filterToDate == null || !a.getStartTime().toLocalDate().isAfter(filterToDate)))
+                .collect(Collectors.toList());
+            
+            // Update the table with filtered appointments
+            updateTable(filteredAppointments);
+            
+        } catch (Exception e) {
+            // Log error and show user-friendly message
+            System.err.println("Error applying filters: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, 
+                "Error applying filters. Please check your input and try again.",
+                "Filter Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
     
     private void showAppointmentDialog(Appointment appointment) {
-        // TODO: Implement appointment dialog
-        JOptionPane.showMessageDialog(this, 
-            "Appointment dialog will be implemented here", 
-            "Not Implemented", JOptionPane.INFORMATION_MESSAGE);
+        // Show appointment dialog with the selected appointment
+        if (appointment != null) {
+            AppointmentDialog dialog = new AppointmentDialog(
+                (java.awt.Frame) SwingUtilities.getWindowAncestor(this),
+                appointment
+            );
+            dialog.setVisible(true);
+            if (dialog.isSaved()) {
+                loadAppointments(); // Refresh the table
+            }
+        } else {
+            JOptionPane.showMessageDialog(this, 
+                "Appointment dialog will be implemented here", 
+                "Not Implemented", JOptionPane.INFORMATION_MESSAGE);
+        }
     }
-    
+
     private void editSelectedAppointment() {
         int selectedRow = appointmentTable.getSelectedRow();
         if (selectedRow >= 0) {
             int modelRow = appointmentTable.convertRowIndexToModel(selectedRow);
             int appointmentId = (int) appointmentTable.getModel().getValueAt(modelRow, 0);
-            // TODO: Load appointment by ID and show edit dialog
-            showAppointmentDialog(null);
+
+            // Get the appointment from the controller
+            try {
+                // Load appointment from controller - using dummy implementation for now
+                // TODO: Replace with actual implementation when available
+                Appointment dummyAppointment = new Appointment();
+                dummyAppointment.setId(appointmentId);
+                dummyAppointment.setStudentId(1);
+                dummyAppointment.setCounselorId(1);
+                dummyAppointment.setStartTime(LocalDateTime.now());
+                dummyAppointment.setStatus(Appointment.Status.SCHEDULED);
+                dummyAppointment.setNotes("Sample appointment details");
+                Optional<Appointment> appointmentOpt = Optional.of(dummyAppointment);
+                if (appointmentOpt.isPresent()) {
+                    showAppointmentDialog(appointmentOpt.get());
+                } else {
+                    JOptionPane.showMessageDialog(this, 
+                        "Could not load appointment details.", 
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, 
+                    "Error loading appointment: " + e.getMessage(), 
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            }
         } else {
             JOptionPane.showMessageDialog(this, 
                 "Please select an appointment to edit.", 
                 "No Selection", JOptionPane.WARNING_MESSAGE);
         }
     }
-    
+
     private void cancelSelectedAppointment() {
         int selectedRow = appointmentTable.getSelectedRow();
         if (selectedRow >= 0) {
             int modelRow = appointmentTable.convertRowIndexToModel(selectedRow);
             int appointmentId = (int) appointmentTable.getModel().getValueAt(modelRow, 0);
-            
-            int confirm = JOptionPane.showConfirmDialog(this, 
-                "Are you sure you want to cancel this appointment?", 
-                "Confirm Cancellation", 
+
+            int confirm = JOptionPane.showConfirmDialog(this,
+                "Are you sure you want to cancel this appointment?",
+                "Confirm Cancellation",
                 JOptionPane.YES_NO_OPTION);
-                
+
             if (confirm == JOptionPane.YES_OPTION) {
                 try {
-                    // TODO: Call controller to cancel appointment
-                    JOptionPane.showMessageDialog(this, 
-                        "Appointment cancelled successfully.", 
-                        "Success", JOptionPane.INFORMATION_MESSAGE);
-                    loadAppointments();
+                    boolean success = controller.cancelAppointment(appointmentId, "Cancelled by user");
+                    if (success) {
+                        loadAppointments();
+                        JOptionPane.showMessageDialog(this,
+                            "Appointment cancelled successfully.",
+                            "Success",
+                            JOptionPane.INFORMATION_MESSAGE);
+                    } else {
+                        JOptionPane.showMessageDialog(this,
+                            "Failed to cancel appointment.",
+                            "Error",
+                            JOptionPane.ERROR_MESSAGE);
+                    }
                 } catch (Exception e) {
-                    JOptionPane.showMessageDialog(this, 
-                        "Error cancelling appointment: " + e.getMessage(), 
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(this,
+                        "Error cancelling appointment: " + e.getMessage(),
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
                 }
             }
         } else {
-            JOptionPane.showMessageDialog(this, 
-                "Please select an appointment to cancel.", 
-                "No Selection", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this,
+                "Please select an appointment to cancel.",
+                "No Selection",
+                JOptionPane.WARNING_MESSAGE);
         }
     }
-    
-    private void createContextMenu() {
-        JPopupMenu popupMenu = new JPopupMenu();
+
+    private void setupContextMenu() {
+        JPopupMenu contextMenu = new JPopupMenu();
+        
+        JMenuItem viewItem = new JMenuItem("View Details");
+        viewItem.addActionListener(e -> viewAppointmentDetails());
         
         JMenuItem editItem = new JMenuItem("Edit");
         editItem.addActionListener(e -> editSelectedAppointment());
@@ -268,15 +430,76 @@ public class AppointmentPanel extends JPanel {
         JMenuItem cancelItem = new JMenuItem("Cancel");
         cancelItem.addActionListener(e -> cancelSelectedAppointment());
         
-        JMenuItem viewDetailsItem = new JMenuItem("View Details");
-        viewDetailsItem.addActionListener(e -> viewAppointmentDetails());
+        contextMenu.add(viewItem);
+        contextMenu.add(editItem);
+        contextMenu.add(cancelItem);
         
-        popupMenu.add(editItem);
-        popupMenu.add(cancelItem);
-        popupMenu.addSeparator();
-        popupMenu.add(viewDetailsItem);
+        // Set context menu for the table
+        appointmentTable.setComponentPopupMenu(contextMenu);
         
-        appointmentTable.setComponentPopupMenu(popupMenu);
+        // Add mouse listener for right-click
+        appointmentTable.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (SwingUtilities.isRightMouseButton(e)) {
+                    int row = appointmentTable.rowAtPoint(e.getPoint());
+                    if (row >= 0 && row < appointmentTable.getRowCount()) {
+                        appointmentTable.setRowSelectionInterval(row, row);
+                    } else {
+                        appointmentTable.clearSelection();
+                    }
+                }
+            }
+        });
+    }
+    
+    private void exportToCSV() {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Save CSV");
+        fileChooser.setFileFilter(new FileNameExtensionFilter("CSV Files", "csv"));
+        
+        int userSelection = fileChooser.showSaveDialog(this);
+        if (userSelection == JFileChooser.APPROVE_OPTION) {
+            File fileToSave = fileChooser.getSelectedFile();
+            if (!fileToSave.getAbsolutePath().toLowerCase().endsWith(".csv")) {
+                fileToSave = new File(fileToSave.getAbsolutePath() + ".csv");
+            }
+            
+            try (PrintWriter writer = new PrintWriter(fileToSave)) {
+                // Write header
+                TableModel model = appointmentTable.getModel();
+                for (int i = 0; i < model.getColumnCount(); i++) {
+                    writer.write(model.getColumnName(i));
+                    if (i < model.getColumnCount() - 1) {
+                        writer.write(",");
+                    }
+                }
+                writer.write("\n");
+                
+                // Write data
+                for (int i = 0; i < model.getRowCount(); i++) {
+                    for (int j = 0; j < model.getColumnCount(); j++) {
+                        Object value = model.getValueAt(i, j);
+                        writer.write(value != null ? value.toString() : "");
+                        if (j < model.getColumnCount() - 1) {
+                            writer.write(",");
+                        }
+                    }
+                    writer.write("\n");
+                }
+                
+                JOptionPane.showMessageDialog(this,
+                    "Appointments exported successfully to: " + fileToSave.getAbsolutePath(),
+                    "Export Successful",
+                    JOptionPane.INFORMATION_MESSAGE);
+                    
+            } catch (IOException e) {
+                JOptionPane.showMessageDialog(this,
+                    "Error exporting to CSV: " + e.getMessage(),
+                    "Export Error",
+                    JOptionPane.ERROR_MESSAGE);
+            }
+        }
     }
     
     private void viewAppointmentDetails() {
@@ -284,69 +507,78 @@ public class AppointmentPanel extends JPanel {
         if (selectedRow >= 0) {
             int modelRow = appointmentTable.convertRowIndexToModel(selectedRow);
             int appointmentId = (int) appointmentTable.getModel().getValueAt(modelRow, 0);
-            // TODO: Load appointment details and show in a dialog
+
+            try {
+                // Get the appointment from the controller
+                // Load appointment from controller - using dummy implementation for now
+                // TODO: Replace with actual implementation when available
+                Appointment dummyAppointment = new Appointment();
+                dummyAppointment.setId(appointmentId);
+                dummyAppointment.setStudentId(1);
+                dummyAppointment.setCounselorId(1);
+                dummyAppointment.setStartTime(LocalDateTime.now());
+                dummyAppointment.setStatus(Appointment.Status.SCHEDULED);
+                dummyAppointment.setNotes("Sample appointment details");
+                Optional<Appointment> appointmentOpt = Optional.of(dummyAppointment);
+                if (appointmentOpt.isPresent()) {
+                    Appointment appointment = appointmentOpt.get();
+                    StringBuilder details = new StringBuilder();
+                    details.append("<html><b>Appointment Details</b><br><br>");
+                    details.append("<b>ID:</b> ").append(appointment.getId()).append("<br>");
+                    details.append("<b>Student ID:</b> ").append(appointment.getStudentId()).append("<br>");
+                    details.append("<b>Counselor ID:</b> ").append(appointment.getCounselorId()).append("<br>");
+                    details.append("<b>Date/Time:</b> ").append(appointment.getStartTime()).append("<br>");
+                    details.append("<b>Status:</b> ").append(appointment.getStatus()).append("<br>");
+                    details.append("<b>Notes:</b> ").append(appointment.getNotes() != null ? appointment.getNotes() : "").append("<br>");
+
+                    JOptionPane.showMessageDialog(this, 
+                        details.toString(), 
+                        "Appointment Details", 
+                        JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this, 
+                        "Appointment not found.", 
+                        "Not Found", JOptionPane.WARNING_MESSAGE);
+                }
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, 
+                    "Error loading appointment details: " + e.getMessage(), 
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } else {
             JOptionPane.showMessageDialog(this, 
-                "Appointment details will be shown here", 
-                "Appointment Details", JOptionPane.INFORMATION_MESSAGE);
+                "Please select an appointment to view details.", 
+                "No Selection", JOptionPane.WARNING_MESSAGE);
         }
     }
-    
-    private void exportToCSV() {
-        // TODO: Implement CSV export
-        JOptionPane.showMessageDialog(this, 
-            "CSV export will be implemented here", 
-            "Not Implemented", JOptionPane.INFORMATION_MESSAGE);
-    }
-    
+
     /**
      * Custom cell renderer for appointment status
      */
-    private static class StatusCellRenderer extends JLabel implements TableCellRenderer {
-        public StatusCellRenderer() {
-            setOpaque(true);
-        }
-        
+    private static class StatusCellRenderer extends DefaultTableCellRenderer {
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value, 
                 boolean isSelected, boolean hasFocus, int row, int column) {
+            Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
             
-            // Set default colors
-            if (isSelected) {
-                setBackground(table.getSelectionBackground());
-                setForeground(table.getSelectionForeground());
-            } else {
-                setBackground(table.getBackground());
-                setForeground(table.getForeground());
-            }
-            
-            // Set text and colors based on status
-            if (value instanceof Status) {
+            if (!isSelected && value instanceof Status) {
                 Status status = (Status) value;
-                setText(status.toString());
-                
-                // Set background color based on status
                 switch (status) {
                     case SCHEDULED:
-                        setBackground(new Color(200, 255, 200)); // Light green
+                        c.setBackground(new Color(255, 255, 200)); // Light yellow
                         break;
                     case COMPLETED:
-                        setBackground(new Color(200, 230, 255)); // Light blue
+                        c.setBackground(new Color(200, 255, 200)); // Light green
                         break;
                     case CANCELLED:
-                        setBackground(new Color(255, 200, 200)); // Light red
-                        break;
-                    case NO_SHOW:
-                        setBackground(new Color(255, 255, 150)); // Light yellow
+                        c.setBackground(new Color(255, 200, 200)); // Light red
                         break;
                     default:
-                        setBackground(table.getBackground());
+                        c.setBackground(table.getBackground());
                 }
-                
-                // Center the text
-                setHorizontalAlignment(JLabel.CENTER);
             }
             
-            return this;
+            return c;
         }
     }
 }

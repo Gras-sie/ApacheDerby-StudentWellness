@@ -1,6 +1,9 @@
+C:\Users\User\OneDrive - belgiumcampus.ac.za\Belgium ITversity Year 3\Semester 2\PRG 381\Project\ApacheDerby-StudentWellness\src\main\java\com\wellness\controller\AppointmentController.java
 C:\Users\User\OneDrive - belgiumcampus.ac.za\Belgium ITversity Year 3\Semester 2\PRG 381\Project\ApacheDerby-StudentWellness\src\main\java\com\wellness\controller\BaseController.java
 C:\Users\User\OneDrive - belgiumcampus.ac.za\Belgium ITversity Year 3\Semester 2\PRG 381\Project\ApacheDerby-StudentWellness\src\main\java\com\wellness\dao\AppointmentDAO.java
+C:\Users\User\OneDrive - belgiumcampus.ac.za\Belgium ITversity Year 3\Semester 2\PRG 381\Project\ApacheDerby-StudentWellness\src\main\java\com\wellness\dao\AppointmentDAOImpl.java
 C:\Users\User\OneDrive - belgiumcampus.ac.za\Belgium ITversity Year 3\Semester 2\PRG 381\Project\ApacheDerby-StudentWellness\src\main\java\com\wellness\dao\BaseDAO.java
+C:\Users\User\OneDrive - belgiumcampus.ac.za\Belgium ITversity Year 3\Semester 2\PRG 381\Project\ApacheDerby-StudentWellness\src\main\java\com\wellness\dao\BaseDAOImpl.java
 C:\Users\User\OneDrive - belgiumcampus.ac.za\Belgium ITversity Year 3\Semester 2\PRG 381\Project\ApacheDerby-StudentWellness\src\main\java\com\wellness\dao\CounselorDAO.java
 C:\Users\User\OneDrive - belgiumcampus.ac.za\Belgium ITversity Year 3\Semester 2\PRG 381\Project\ApacheDerby-StudentWellness\src\main\java\com\wellness\dao\FeedbackDAO.java
 C:\Users\User\OneDrive - belgiumcampus.ac.za\Belgium ITversity Year 3\Semester 2\PRG 381\Project\ApacheDerby-StudentWellness\src\main\java\com\wellness\exception\ControllerException.java
@@ -16,6 +19,8 @@ C:\Users\User\OneDrive - belgiumcampus.ac.za\Belgium ITversity Year 3\Semester 2
 C:\Users\User\OneDrive - belgiumcampus.ac.za\Belgium ITversity Year 3\Semester 2\PRG 381\Project\ApacheDerby-StudentWellness\src\main\java\com\wellness\util\DatabaseManager.java
 C:\Users\User\OneDrive - belgiumcampus.ac.za\Belgium ITversity Year 3\Semester 2\PRG 381\Project\ApacheDerby-StudentWellness\src\main\java\com\wellness\util\DbUtils.java
 C:\Users\User\OneDrive - belgiumcampus.ac.za\Belgium ITversity Year 3\Semester 2\PRG 381\Project\ApacheDerby-StudentWellness\src\main\java\com\wellness\util\UIUtils.java
+C:\Users\User\OneDrive - belgiumcampus.ac.za\Belgium ITversity Year 3\Semester 2\PRG 381\Project\ApacheDerby-StudentWellness\src\main\java\com\wellness\view\AppointmentDialog.java
+C:\Users\User\OneDrive - belgiumcampus.ac.za\Belgium ITversity Year 3\Semester 2\PRG 381\Project\ApacheDerby-StudentWellness\src\main\java\com\wellness\view\AppointmentPanel.java
 C:\Users\User\OneDrive - belgiumcampus.ac.za\Belgium ITversity Year 3\Semester 2\PRG 381\Project\ApacheDerby-StudentWellness\src\main\java\com\wellness\view\components\DatePicker.java
 C:\Users\User\OneDrive - belgiumcampus.ac.za\Belgium ITversity Year 3\Semester 2\PRG 381\Project\ApacheDerby-StudentWellness\src\main\java\com\wellness\view\components\TimeSelector.java
 C:\Users\User\OneDrive - belgiumcampus.ac.za\Belgium ITversity Year 3\Semester 2\PRG 381\Project\ApacheDerby-StudentWellness\src\main\java\com\wellness\view\MainFrame.java
