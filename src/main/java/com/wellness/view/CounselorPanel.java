@@ -221,11 +221,130 @@ public class CounselorPanel extends JPanel {
     }
     
     private void showAddEditDialog(Counselor counselor) {
-        // TODO: Implement add/edit dialog
-        JOptionPane.showMessageDialog(this,
-            "Add/Edit functionality will be implemented here",
-            "Feature Coming Soon",
-            JOptionPane.INFORMATION_MESSAGE);
+        JPanel panel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        
+        // First Name
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        panel.add(new JLabel("First Name:"), gbc);
+        
+        gbc.gridx = 1;
+        JTextField firstNameField = new JTextField(20);
+        if (counselor != null) {
+            firstNameField.setText(counselor.getFirstName());
+        }
+        panel.add(firstNameField, gbc);
+        
+        // Last Name
+        gbc.gridx = 0;
+        gbc.gridy++;
+        panel.add(new JLabel("Last Name:"), gbc);
+        
+        gbc.gridx = 1;
+        JTextField lastNameField = new JTextField(20);
+        if (counselor != null) {
+            lastNameField.setText(counselor.getLastName());
+        }
+        panel.add(lastNameField, gbc);
+        
+        // Email
+        gbc.gridx = 0;
+        gbc.gridy++;
+        panel.add(new JLabel("Email:"), gbc);
+        
+        gbc.gridx = 1;
+        JTextField emailField = new JTextField(20);
+        if (counselor != null) {
+            emailField.setText(counselor.getEmail());
+        }
+        panel.add(emailField, gbc);
+        
+        // Phone
+        gbc.gridx = 0;
+        gbc.gridy++;
+        panel.add(new JLabel("Phone:"), gbc);
+        
+        gbc.gridx = 1;
+        JTextField phoneField = new JTextField(20);
+        if (counselor != null) {
+            phoneField.setText(counselor.getPhoneNumber());
+        }
+        panel.add(phoneField, gbc);
+        
+        // Specialization
+        gbc.gridx = 0;
+        gbc.gridy++;
+        panel.add(new JLabel("Specialization:"), gbc);
+        
+        gbc.gridx = 1;
+        JTextField specializationField = new JTextField(20);
+        if (counselor != null) {
+            specializationField.setText(counselor.getSpecialization());
+        }
+        panel.add(specializationField, gbc);
+        
+        // Status
+        gbc.gridx = 0;
+        gbc.gridy++;
+        panel.add(new JLabel("Status:"), gbc);
+        
+        gbc.gridx = 1;
+        JComboBox<String> statusCombo = new JComboBox<>(new String[]{"Active", "Inactive"});
+        if (counselor != null) {
+            statusCombo.setSelectedItem(counselor.isActive() ? "Active" : "Inactive");
+        }
+        panel.add(statusCombo, gbc);
+        
+        // Show dialog
+        int result = JOptionPane.showConfirmDialog(
+            this,
+            panel,
+            counselor == null ? "Add New Counselor" : "Edit Counselor",
+            JOptionPane.OK_CANCEL_OPTION,
+            JOptionPane.PLAIN_MESSAGE
+        );
+        
+        if (result == JOptionPane.OK_OPTION) {
+            try {
+                if (counselor == null) {
+                    counselor = new Counselor();
+                }
+                
+                counselor.setFirstName(firstNameField.getText().trim());
+                counselor.setLastName(lastNameField.getText().trim());
+                counselor.setEmail(emailField.getText().trim());
+                counselor.setPhoneNumber(phoneField.getText().trim());
+                counselor.setSpecialization(specializationField.getText().trim());
+                counselor.setActive("Active".equals(statusCombo.getSelectedItem()));
+                
+                if (counselor.getId() == null) {
+                    controller.createCounselor(counselor);
+                    JOptionPane.showMessageDialog(this,
+                        "Counselor added successfully!",
+                        "Success",
+                        JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    controller.updateCounselor(counselor);
+                    JOptionPane.showMessageDialog(this,
+                        "Counselor updated successfully!",
+                        "Success",
+                        JOptionPane.INFORMATION_MESSAGE);
+                }
+                
+                // Refresh the table
+                loadCounselors();
+                
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this,
+                    "Error saving counselor: " + e.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+            }
+        }
     }
     
     private void editSelectedCounselor() {

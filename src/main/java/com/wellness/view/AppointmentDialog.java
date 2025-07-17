@@ -2,7 +2,9 @@ package com.wellness.view;
 
 import com.wellness.model.Appointment;
 import com.wellness.model.Appointment.Status;
+
 import javax.swing.*;
+
 import javax.swing.border.EmptyBorder;
 import javax.swing.text.MaskFormatter;
 import java.awt.*;
@@ -62,9 +64,17 @@ public class AppointmentDialog extends JDialog {
         
         gbc.gridx = 1;
         studentCombo = new JComboBox<>();
-        // TODO: Load actual students
-        studentCombo.addItem("John Smith (ID: 1001)");
-        studentCombo.addItem("Jane Doe (ID: 1002)");
+        // Load students (placeholder implementation)
+        // In a real implementation, this would load from a database
+        String[] students = {
+            "John Smith (ID: 1001)",
+            "Jane Doe (ID: 1002)",
+            "Robert Johnson (ID: 1003)",
+            "Emily Davis (ID: 1004)"
+        };
+        for (String student : students) {
+            studentCombo.addItem(student);
+        }
         formPanel.add(studentCombo, gbc);
         
         // Counselor selection
@@ -74,9 +84,17 @@ public class AppointmentDialog extends JDialog {
         
         gbc.gridx = 1;
         counselorCombo = new JComboBox<>();
-        // TODO: Load actual counselors
-        counselorCombo.addItem("Dr. Sarah Johnson (Psychology)");
-        counselorCombo.addItem("Dr. Michael Brown (Career)");
+        // Load counselors (placeholder implementation)
+        // In a real implementation, this would load from a database
+        String[] counselors = {
+            "Dr. Sarah Johnson (Psychology)",
+            "Dr. Michael Brown (Career)",
+            "Dr. Lisa Wong (Academic)",
+            "Dr. James Wilson (Mental Health)"
+        };
+        for (String counselor : counselors) {
+            counselorCombo.addItem(counselor);
+        }
         counselorCombo.addActionListener(e -> updateAvailableTimes());
         formPanel.add(counselorCombo, gbc);
         
@@ -152,14 +170,14 @@ public class AppointmentDialog extends JDialog {
     }
     
     private void loadAppointmentData() {
-        if (appointment.getStudentId() != null) {
-            // TODO: Set selected student in combo
-            studentCombo.setSelectedIndex(0); // Placeholder
+        // For now, we'll just select the first item as a placeholder
+        // In a real implementation, we would look up the student and counselor by ID
+        if (appointment.getStudentId() != null && studentCombo.getItemCount() > 0) {
+            studentCombo.setSelectedIndex(0);
         }
         
-        if (appointment.getCounselorId() != null) {
-            // TODO: Set selected counselor in combo
-            counselorCombo.setSelectedIndex(0); // Placeholder
+        if (appointment.getCounselorId() != null && counselorCombo.getItemCount() > 0) {
+            counselorCombo.setSelectedIndex(0);
         }
         
         if (appointment.getStartTime() != null) {
@@ -189,7 +207,12 @@ public class AppointmentDialog extends JDialog {
             timeCombo.addItem(slot);
         }
         
-        // TODO: Filter time slots based on counselor availability
+        // Filter time slots based on counselor availability
+        // This is a placeholder - in a real implementation, we would check the counselor's schedule
+        timeCombo.removeAllItems();
+        for (String slot : TIME_SLOTS) {
+            timeCombo.addItem(slot);
+        }
     }
     
     private boolean validateForm() {
@@ -221,7 +244,26 @@ public class AppointmentDialog extends JDialog {
             return false;
         }
         
-        // TODO: Add more validation as needed
+        // Basic validation
+        if (studentCombo.getSelectedItem() == null || studentCombo.getSelectedItem().toString().trim().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please select a student", "Validation Error", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+        
+        if (counselorCombo.getSelectedItem() == null || counselorCombo.getSelectedItem().toString().trim().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please select a counselor", "Validation Error", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+        
+        if (dateField.getText().trim().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please select a date", "Validation Error", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+        
+        if (timeCombo.getSelectedItem() == null || timeCombo.getSelectedItem().toString().trim().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please select a time slot", "Validation Error", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
         
         return true;
     }
