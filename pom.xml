@@ -39,9 +39,11 @@
         </dependencies>
     </dependencyManagement>
     
+    <!-- Maven Central Repository -->
     <repositories>
         <repository>
             <id>central</id>
+            <name>Maven Central</name>
             <url>https://repo.maven.apache.org/maven2</url>
             <releases>
                 <enabled>true</enabled>
@@ -51,7 +53,6 @@
                 <enabled>false</enabled>
             </snapshots>
         </repository>
-
     </repositories>
     
     <pluginRepositories>
@@ -69,23 +70,44 @@
     </pluginRepositories>
 
     <dependencies>
-        <!-- Apache Derby -->
+        <!-- Apache Derby Embedded Database -->
         <dependency>
             <groupId>org.apache.derby</groupId>
             <artifactId>derby</artifactId>
             <version>${derby.version}</version>
+        </dependency>
+        
+        <!-- Derby Network Server (optional, for client/server mode) -->
+        <dependency>
+            <groupId>org.apache.derby</groupId>
+            <!-- spellchecker:disable-next-line -->
+            <artifactId>derbynet</artifactId>
+            <version>${derby.version}</version>
             <scope>runtime</scope>
         </dependency>
+        
+        <!-- Derby Client (for network client) -->
         <dependency>
             <groupId>org.apache.derby</groupId>
             <artifactId>derbyclient</artifactId>
             <version>${derby.version}</version>
         </dependency>
+        
+        <!-- Derby Tools (optional, for ij command line tool) -->
         <dependency>
             <groupId>org.apache.derby</groupId>
             <artifactId>derbytools</artifactId>
             <version>${derby.version}</version>
+            <optional>true</optional>
             <scope>runtime</scope>
+        </dependency>
+        
+        <!-- JUnit 5 aggregate (API + Params + Engine) -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.jupiter.version}</version>
+            <scope>test</scope>
         </dependency>
         
         <!-- FlatLaf for modern look and feel -->
@@ -125,9 +147,34 @@
             <version>${junit.jupiter.version}</version>
             <scope>test</scope>
         </dependency>
+        <!-- JUnit Platform -->
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-suite</artifactId>
+            <version>${junit.platform.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-runner</artifactId>
+            <version>${junit.platform.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-suite-api</artifactId>
+            <version>${junit.platform.version}</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.junit.platform</groupId>
             <artifactId>junit-platform-launcher</artifactId>
+            <version>${junit.platform.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-engine</artifactId>
             <version>${junit.platform.version}</version>
             <scope>test</scope>
         </dependency>
@@ -136,44 +183,92 @@
             <artifactId>commons-logging</artifactId>
             <version>${commons.logging.version}</version>
         </dependency>
-        
-        <!-- JUnit Platform Runner for testing -->
-        <dependency>
-            <groupId>org.junit.platform</groupId>
-            <artifactId>junit-platform-runner</artifactId>
-            <version>${junit.platform.version}</version>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
+
+
 
     <build>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.3.0</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix>lib/</classpathPrefix>
+                            <mainClass>com.wellness.view.MainFrame</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <id>copy-dependencies</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/lib</outputDirectory>
+                            <overWriteReleases>false</overWriteReleases>
+                            <overWriteSnapshots>false</overWriteSnapshots>
+                            <overWriteIfNewer>true</overWriteIfNewer>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.13.0</version>
                 <configuration>
+                    <source>21</source>
+                    <target>21</target>
                     <release>21</release>
                     <compilerArgs>
                         <arg>-Xlint:all</arg>
                         <arg>-parameters</arg>
                     </compilerArgs>
+                    <fork>true</fork>
+                    <!-- spellchecker:disable-next-line -->
+                    <!-- Removed explicit javac path to use system default -->
+                    <compilerVersion>21</compilerVersion>
+                    <verbose>true</verbose>
                 </configuration>
             </plugin>
             <plugin>
+                <!-- spellchecker:disable-next-line -->
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
+                <configuration>
+                    <mainClass>com.wellness.view.MainFrame</mainClass>
+                </configuration>
+            </plugin>
+            
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.2.5</version>
-                <dependencies>
-                    <dependency>
-                        <groupId>org.junit.platform</groupId>
-                        <artifactId>junit-platform-surefire-provider</artifactId>
-                        <version>${junit.platform.version}</version>
-                    </dependency>
-                </dependencies>
-            </plugin>
+                <version>3.2.3</version>
+                <!-- no explicit dependencies needed; surefire includes JUnit 5 provider automatically -->
 
-            <!-- Maven Assembly Plugin (for creating executable JAR) -->
+
+
+                <configuration>
+                    <useModulePath>false</useModulePath>
+                    <includes>
+                        <include>**/*Test.java</include>
+                        <include>**/Test*.java</include>
+                        <include>**/*Tests.java</include>
+                    </includes>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>

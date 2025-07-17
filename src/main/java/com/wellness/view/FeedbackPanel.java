@@ -4,6 +4,8 @@ import com.wellness.controller.FeedbackController;
 import com.wellness.model.Feedback;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import com.wellness.util.EventBus;
+import com.wellness.util.EventBus.EventType;
 import java.awt.*;
 import java.util.List;
 import java.util.Optional;
@@ -85,6 +87,9 @@ public class FeedbackPanel extends JPanel {
         
         JScrollPane scrollPane = new JScrollPane(feedbackTable);
         add(scrollPane, BorderLayout.CENTER);
+        
+        // Register for feedback updates
+        EventBus.register(EventType.FEEDBACK_UPDATED, evt -> SwingUtilities.invokeLater(this::refreshFeedback));
         
         // Load initial data
         refreshFeedback();
@@ -194,11 +199,12 @@ public class FeedbackPanel extends JPanel {
                     .findFirst();
                 
                 if (feedbackToEdit.isPresent()) {
-                    // TODO: Open the feedback form dialog in edit mode with the selected feedback
-                    JOptionPane.showMessageDialog(this, 
-                        "Editing feedback with ID: " + feedbackId, 
-                        "Edit Feedback", 
-                        JOptionPane.INFORMATION_MESSAGE);
+                                        FeedbackFormDialog dialog = new FeedbackFormDialog(
+                        (JFrame) SwingUtilities.getWindowAncestor(this),
+                        controller,
+                        feedbackToEdit.get()
+                    );
+                    dialog.showDialog();
                 } else {
                     JOptionPane.showMessageDialog(this, 
                         "Could not find the selected feedback to edit.", 
@@ -232,12 +238,12 @@ public class FeedbackPanel extends JPanel {
     }
     
     private void showAddFeedbackDialog() {
-        // Implementation for adding new feedback
-        // This would open a dialog with a form to submit new feedback
-        JOptionPane.showMessageDialog(this, 
-            "Add Feedback form will be implemented here.", 
-            "Add Feedback", 
-            JOptionPane.INFORMATION_MESSAGE);
+        FeedbackFormDialog dialog = new FeedbackFormDialog(
+            (JFrame) SwingUtilities.getWindowAncestor(this),
+            controller,
+            null
+        );
+        dialog.showDialog();
     }
     
     private void showFeedbackDetails(Feedback feedback) {

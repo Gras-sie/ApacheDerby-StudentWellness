@@ -1,0 +1,38 @@
+-- Create Counselors table
+CREATE TABLE counselors (
+  id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY (START WITH 1, INCREMENT BY 1),
+  name VARCHAR(100) NOT NULL,
+  specialization VARCHAR(100),
+  availability VARCHAR(100),
+  email VARCHAR(100) NOT NULL UNIQUE,
+  phone VARCHAR(20),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create Appointments table
+CREATE TABLE appointments (
+  id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY (START WITH 1, INCREMENT BY 1),
+  student_name VARCHAR(100) NOT NULL,
+  counselor_id INT NOT NULL,
+  appointment_date DATE NOT NULL,
+  appointment_time TIME NOT NULL,
+  status VARCHAR(20) DEFAULT 'SCHEDULED',
+  notes CLOB,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (counselor_id) REFERENCES counselors(id) ON DELETE CASCADE
+);
+
+-- Create Feedback table
+CREATE TABLE feedback (
+  id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY (START WITH 1, INCREMENT BY 1),
+  student_name VARCHAR(100) NOT NULL,
+  counselor_id INT NOT NULL,
+  rating INT CHECK (rating BETWEEN 1 AND 5),
+  comments CLOB,
+  is_anonymous BOOLEAN DEFAULT FALSE,
+  feedback_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (counselor_id) REFERENCES counselors(id) ON DELETE CASCADE
+);

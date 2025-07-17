@@ -1,4 +1,4 @@
-# Maven
+# Maven & Maven Wrapper
 target/
 pom.xml.tag
 pom.xml.releaseBackup
@@ -8,7 +8,8 @@ release.properties
 dependency-reduced-pom.xml
 buildNumber.properties
 .mvn/timing.properties
-.mvn/wrapper/maven-wrapper.jar
+# Keep Maven wrapper JAR under version control (do NOT ignore)
+# .mvn/wrapper/maven-wrapper.jar
 
 # Compiled class file
 *.class
@@ -89,6 +90,9 @@ logs/
 # Local configuration files
 *.properties
 *.prefs
+
+# Maven Wrapper downloaded distributions
+.mvn/wrapper/*/ 
 
 # Build output
 build/

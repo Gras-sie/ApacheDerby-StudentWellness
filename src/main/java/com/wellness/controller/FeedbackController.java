@@ -3,6 +3,8 @@ package com.wellness.controller;
 import com.wellness.model.Feedback;
 import com.wellness.service.FeedbackService;
 import javax.swing.*;
+import com.wellness.util.EventBus;
+import com.wellness.util.EventBus.EventType;
 import java.util.List;
 
 /**
@@ -26,6 +28,7 @@ public class FeedbackController {
     public boolean submitFeedback(Feedback feedback) {
         try {
             feedbackService.createFeedback(feedback);
+            EventBus.post(EventType.FEEDBACK_UPDATED);
             showMessage("Feedback submitted successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
             return true;
         } catch (Exception e) {
@@ -43,6 +46,7 @@ public class FeedbackController {
     public boolean updateFeedback(Feedback feedback) {
         try {
             feedbackService.updateFeedback(feedback);
+            EventBus.post(EventType.FEEDBACK_UPDATED);
             showMessage("Feedback updated successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
             return true;
         } catch (Exception e) {
@@ -60,6 +64,7 @@ public class FeedbackController {
     public boolean deleteFeedback(int feedbackId) {
         try {
             feedbackService.deleteFeedback(feedbackId);
+            EventBus.post(EventType.FEEDBACK_UPDATED);
             showMessage("Feedback deleted successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
             return true;
         } catch (Exception e) {

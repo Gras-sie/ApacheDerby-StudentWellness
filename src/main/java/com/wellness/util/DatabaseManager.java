@@ -20,7 +20,6 @@ public class DatabaseManager {
     
     static {
         initializeDataSource();
-        initializeDatabase();
     }
     
     private DatabaseManager() {
@@ -52,100 +51,66 @@ public class DatabaseManager {
     }
     
     /**
-     * Initializes the database by creating necessary tables if they don't exist.
+     * Initializes the database by running migrations.
+     * This is automatically called when the application starts.
      */
-    private static void initializeDatabase() {
-        String[] createTables = {
-            // Create Counselors table
-            "CREATE TABLE counselors (" +
-            "  id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY (START WITH 1, INCREMENT BY 1)," +
-            "  name VARCHAR(100) NOT NULL," +
-            "  specialization VARCHAR(100)," +
-            "  availability VARCHAR(100)," +
-            "  email VARCHAR(100) NOT NULL UNIQUE," +
-            "  phone VARCHAR(20)" +
-            ")",
-            
-            // Create Appointments table
-            "CREATE TABLE appointments (" +
-            "  id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY (START WITH 1, INCREMENT BY 1)," +
-            "  student_name VARCHAR(100) NOT NULL," +
-            "  counselor_id INT NOT NULL," +
-            "  appointment_date DATE NOT NULL," +
-            "  appointment_time TIME NOT NULL," +
-            "  status VARCHAR(20) DEFAULT 'SCHEDULED'," +
-            "  notes CLOB," +
-            "  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
-            "  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
-            "  FOREIGN KEY (counselor_id) REFERENCES counselors(id) ON DELETE CASCADE" +
-            ")",
-            
-            // Create Feedback table
-            "CREATE TABLE feedback (" +
-            "  id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY (START WITH 1, INCREMENT BY 1)," +
-            "  student_name VARCHAR(100) NOT NULL," +
-            "  counselor_id INT NOT NULL," +
-            "  rating INT CHECK (rating BETWEEN 1 AND 5)," +
-            "  comments CLOB," +
-            "  feedback_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
-            "  FOREIGN KEY (counselor_id) REFERENCES counselors(id) ON DELETE CASCADE" +
-            ")"
-        };
-        
-        try (Connection conn = getConnection();
-             Statement stmt = conn.createStatement()) {
-            // Execute a simple query to verify the connection is valid
-            stmt.execute("SELECT 1 FROM SYS.SYSTABLES");
-            
-            // Check if tables already exist
-            DatabaseMetaData dbm = conn.getMetaData();
-            ResultSet tables = dbm.getTables(null, null, "COUNSELORS", null);
-            
-            if (!tables.next()) {
-                // Tables don't exist, create them
-                for (String query : createTables) {
-                    stmt.executeUpdate(query);
-                }
-                LOGGER.info("Database tables created successfully");
-                
-                // Insert sample data
-                insertSampleData(conn);
-            }
-            
+    public static void initializeDatabase() {
+        try {
+            DatabaseMigrator.migrate();
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error initializing database", e);
+            LOGGER.log(Level.SEVERE, "Failed to initialize database", e);
             throw new RuntimeException("Failed to initialize database", e);
         }
     }
     
     /**
-     * Inserts sample data into the database for testing purposes.
+     * Resets the database by dropping all tables and running migrations again.
+     * WARNING: This will delete all data in the database.
+     * @throws SQLException if a database error occurs
      */
-    private static void insertSampleData(Connection conn) throws SQLException {
-        String[] sampleData = {
-            // Insert sample counselors
-            "INSERT INTO counselors (name, specialization, availability, email, phone) VALUES " +
-            "('Dr. Sarah Johnson', 'Stress Management', 'Mon-Fri 9am-5pm', 'sarah.johnson@wellness.com', '123-456-7890')",
+    public static void resetDatabase() throws SQLException {
+        try (Connection conn = getConnection();
+             Statement stmt = conn.createStatement()) {
             
-            "INSERT INTO counselors (name, specialization, availability, email, phone) VALUES " +
-            "('Dr. Michael Chen', 'Anxiety Disorders', 'Tue-Thu 10am-6pm', 'michael.chen@wellness.com', '123-456-7891')",
+            // Disable foreign key constraints
+            stmt.execute("SET CONSTRAINTS ALL DEFERRED");
             
-            // Insert sample appointments
-            "INSERT INTO appointments (student_name, counselor_id, appointment_date, appointment_time, status) VALUES " +
-            "('John Doe', 1, CURRENT_DATE, '14:30:00', 'SCHEDULED')",
+            // Drop tables if they exist
+            dropTableIfExists(stmt, "feedback");
+            dropTableIfExists(stmt, "appointments");
+            dropTableIfExists(stmt, "counselors");
+            dropTableIfExists(stmt, "schema_migrations");
             
-            // Insert sample feedback
-            "INSERT INTO feedback (student_name, counselor_id, rating, comments) VALUES " +
-            "('Jane Smith', 1, 5, 'Excellent session, very helpful!')"
-        };
-        
-        try (Statement stmt = conn.createStatement()) {
-            for (String query : sampleData) {
-                stmt.executeUpdate(query);
-            }
-            LOGGER.info("Sample data inserted successfully");
+            LOGGER.info("Dropped all database tables");
+            
+            // Re-run migrations to recreate schema
+            DatabaseMigrator.migrate();
+            
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error resetting database", e);
+            throw e;
         }
     }
+    
+    /**
+     * Drops a table if it exists.
+     */
+    private static void dropTableIfExists(Statement stmt, String tableName) throws SQLException {
+        try {
+            stmt.execute("DROP TABLE " + tableName);
+            LOGGER.log(Level.INFO, "Dropped table: {0}", tableName);
+        } catch (SQLException e) {
+            if (e.getSQLState() != null && e.getSQLState().equals("42Y55")) {
+                // Table doesn't exist, which is fine
+                LOGGER.log(Level.FINE, "Table {0} does not exist, skipping drop", tableName);
+            } else {
+                throw e;
+            }
+        }
+    }
+    
+    // Note: Removed unused helper methods exportTable, truncateTable, and importTable
+    // as they are no longer needed with the migration-based approach
     
     /**
      * Gets a database connection from the connection pool.
@@ -198,16 +163,18 @@ public class DatabaseManager {
         // Ensure the backup directory exists
         java.io.File dir = new java.io.File(backupDir);
         if (!dir.exists()) {
-            dir.mkdirs();
+            if (!dir.mkdirs()) {
+                throw new SQLException("Failed to create backup directory: " + backupDir);
+            }
         }
+        
+        // Normalize the path and escape single quotes for SQL
+        String normalizedPath = dir.getAbsolutePath();
+        normalizedPath = normalizedPath.replace("'", "''");
         
         // Create a connection without using the pool for backup operation
         try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
              Statement stmt = conn.createStatement()) {
-            
-            // Normalize the path and escape single quotes for SQL
-            String normalizedPath = dir.getAbsolutePath();
-            normalizedPath = normalizedPath.replace("'", "''");
             
             String backupCommand = String.format(
                 "CALL SYSCS_UTIL.SYSCS_BACKUP_DATABASE('%s')", 
@@ -234,13 +201,23 @@ public class DatabaseManager {
                 LOGGER.log(Level.WARNING, "Error closing data source during restore", e);
             }
             dataSource = null;
+            // Also shutdown Derby to release all file locks
+            try {
+                DriverManager.getConnection("jdbc:derby:;shutdown=true");
+            } catch (SQLException e) {
+                // Expected error code/state on successful shutdown
+                if (!(e.getErrorCode() == 45000 && "XJ015".equals(e.getSQLState()))) {
+                    LOGGER.log(Level.WARNING, "Unexpected error during Derby shutdown before restore", e);
+                }
+            }
         }
         
         // Normalize the backup directory path
         String normalizedPath = new java.io.File(backupDir).getAbsolutePath();
         
-        // Now restore from backup using a direct connection
-        String restoreUrl = "jdbc:derby:;restoreFrom=" + normalizedPath;
+        // Now restore from backup using a direct connection (must include DB name)
+        String baseUrl = DB_URL.split(";")[0]; // e.g., jdbc:derby:wellnessDB
+        String restoreUrl = baseUrl + ";restoreFrom=" + normalizedPath;
         LOGGER.info("Attempting to restore database from: " + normalizedPath);
         
         try (Connection conn = DriverManager.getConnection(restoreUrl);
